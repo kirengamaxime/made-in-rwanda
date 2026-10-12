@@ -1,0 +1,6 @@
+admin	admin@madeinrwanda.rw	3hD$28dSf!F?
+manager	manager@madeinrwanda.rw	VL!m7LP#4eeG
+seller	baskets@example.rw	Yzw#$*$3&8mV
+seller	fashion@example.rw	Ah@ShEc6PQj5
+seller	coffee@example.rw	F7hxwE@#9EaL
+buyer	buyer@example.rw	#2PZMVMX!LrQ
