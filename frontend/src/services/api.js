@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', timeout: 30000 });
+/**
+ * Base URL for the API.
+ *
+ * Local dev:   set VITE_API_URL=http://localhost:5000/api  in frontend/.env
+ * Production:  set VITE_API_URL=https://made-in-rwanda.onrender.com/api
+ *              in Vercel → Project → Settings → Environment Variables.
+ *
+ * Must include the "/api" suffix — every call below is relative (e.g. "/auth/login").
+ */
+const rawBase = import.meta.env.VITE_API_URL || '/api';
+const baseURL = rawBase.replace(/\/+$/, '');
+
+const api = axios.create({
+  baseURL,
+  // 45s covers Render free-tier cold starts (~30s after 15 min idle).
+  timeout: 45000,
+});
 
 const TOKEN_KEY = 'mir_token';
 export const tokenStore = {
@@ -18,7 +34,9 @@ api.interceptors.request.use((cfg) => {
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    const isAuthCall = (err.config?.url || '').startsWith('/auth/') && !(err.config.url === '/auth/me');
+    const isAuthCall =
+      (err.config?.url || '').startsWith('/auth/') &&
+      err.config.url !== '/auth/me';
     if (err.response?.status === 401 && tokenStore.get() && !isAuthCall) {
       tokenStore.clear();
       window.dispatchEvent(new Event('auth:expired'));
@@ -27,12 +45,18 @@ api.interceptors.response.use(
   }
 );
 
-export const getErrorMessage = (err, fallback = 'Something went wrong. Please try again.') => {
+export const getErrorMessage = (
+  err,
+  fallback = 'Something went wrong. Please try again.'
+) => {
   if (err?.response?.data?.message) return err.response.data.message;
-  if (err?.code === 'ERR_NETWORK') return 'Cannot reach the server. Check your connection and try again.';
-  if (err?.code === 'ECONNABORTED') return 'The request timed out. Please try again.';
+  if (err?.code === 'ERR_NETWORK')
+    return 'Cannot reach the server. If the backend was idle, it may take up to 30 seconds to wake up — please try again.';
+  if (err?.code === 'ECONNABORTED')
+    return 'The request timed out. The server may be waking up — please try again in a moment.';
   return fallback;
 };
+
 export const getFieldErrors = (err) => err?.response?.data?.errors || {};
 
 const multipart = { headers: { 'Content-Type': 'multipart/form-data' } };
@@ -57,7 +81,8 @@ export const productsApi = {
 };
 
 export const categoriesApi = {
-  list: (all = false) => api.get('/categories', { params: all ? { all: true } : {} }),
+  list: (all = false) =>
+    api.get('/categories', { params: all ? { all: true } : {} }),
   create: (d) => api.post('/categories', d),
   update: (id, d) => api.put(`/categories/${id}`, d),
   remove: (id) => api.delete(`/categories/${id}`),
@@ -70,11 +95,14 @@ export const sellersApi = {
   stats: () => api.get('/sellers/me/stats'),
 };
 
-export const settingsApi = { public: () => api.get('/settings/public') };
+export const settingsApi = {
+  public: () => api.get('/settings/public'),
+};
 
 export const applicationsApi = {
   submit: (formData) => api.post('/seller-applications', formData, multipart),
-  status: (email) => api.get('/seller-applications/status', { params: { email } }),
+  status: (email) =>
+    api.get('/seller-applications/status', { params: { email } }),
   list: (params) => api.get('/seller-applications', { params }),
   get: (id) => api.get(`/seller-applications/${id}`),
   approve: (id, d) => api.put(`/seller-applications/${id}/approve`, d),
@@ -99,12 +127,16 @@ export const paymentsApi = {
 export const adminApi = {
   stats: () => api.get('/admin/stats'),
   users: (params) => api.get('/admin/users', { params }),
-  setUserStatus: (id, isActive) => api.put(`/admin/users/${id}/status`, { isActive }),
+  setUserStatus: (id, isActive) =>
+    api.put(`/admin/users/${id}/status`, { isActive }),
   sellers: () => api.get('/admin/sellers'),
-  setSellerStatus: (id, status) => api.put(`/admin/sellers/${id}/status`, { status }),
-  resetCredentials: (id) => api.post(`/admin/sellers/${id}/reset-credentials`),
+  setSellerStatus: (id, status) =>
+    api.put(`/admin/sellers/${id}/status`, { status }),
+  resetCredentials: (id) =>
+    api.post(`/admin/sellers/${id}/reset-credentials`),
   products: (params) => api.get('/admin/products', { params }),
-  setProductStatus: (id, status) => api.put(`/admin/products/${id}/status`, { status }),
+  setProductStatus: (id, status) =>
+    api.put(`/admin/products/${id}/status`, { status }),
   getSettings: () => api.get('/admin/settings'),
   updateSettings: (d) => api.put('/admin/settings', d),
 };
