@@ -15,10 +15,21 @@ app.set('trust proxy', 1);
 
 // cross-origin resource policy relaxed so the React app (another origin) can display /uploads images
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({
-  origin: (origin, cb) => (!origin || clientUrls.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'))),
+
+// --- CORS ---
+const corsOptions = {
+  origin: (origin, cb) =>
+    !origin || clientUrls.includes(origin)
+      ? cb(null, true)
+      : cb(new Error('Not allowed by CORS')),
   credentials: true,
-}));
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+};
+app.options('*', cors(corsOptions)); // answer preflight for every route
+app.use(cors(corsOptions));
+
 app.use(express.json({ limit: '100kb' })); // request bodies are never logged (card data safety)
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(sanitize);
